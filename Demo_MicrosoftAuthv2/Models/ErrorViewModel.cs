@@ -1,6 +1,6 @@
 using System;
 
-namespace Demo_MicrosoftAuth.Models
+namespace Demo_MicrosoftAuthv2.Models
 {
     public class ErrorViewModel
     {

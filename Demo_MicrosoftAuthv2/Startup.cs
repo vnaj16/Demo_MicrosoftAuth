@@ -1,7 +1,10 @@
+using Demo_MicrosoftAuthv2.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -10,7 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Demo_MicrosoftAuth
+namespace Demo_MicrosoftAuthv2
 {
     public class Startup
     {
@@ -24,21 +27,23 @@ namespace Demo_MicrosoftAuth
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllersWithViews();
+            services.AddDbContext<ApplicationDbContext>(options =>
+                    options.UseInMemoryDatabase("identitydb"));
+            //options.UseSqlServer(
+            //    Configuration.GetConnectionString("DefaultConnection")));
+            services.AddDatabaseDeveloperPageExceptionFilter();
 
-            services.AddAuthentication("Login.Cookie")
-    .AddCookie("Login.Cookie",
-        options =>
-        {
-            options.Cookie.Name = "Login.Cookie";
-            options.LoginPath = new PathString("/Home/Login");
-            options.Cookie.HttpOnly = false;
-            options.ExpireTimeSpan = TimeSpan.FromHours(12);
-            options.SlidingExpiration = false;
-            options.AccessDeniedPath = new PathString("/Home/Login");
-        });
-            services.AddAuthorization(options =>
-            { });
+            services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
+                .AddEntityFrameworkStores<ApplicationDbContext>();
+
+            services.AddAuthentication()
+    .AddMicrosoftAccount(microsoftOptions =>
+    {
+        microsoftOptions.ClientId = Environment.GetEnvironmentVariable("MS_CLIENT_ID");
+        microsoftOptions.ClientSecret = Environment.GetEnvironmentVariable("MS_AUTH_SECRET");
+        microsoftOptions.CallbackPath = new Microsoft.AspNetCore.Http.PathString("/Home/Microsoft");
+    });
+            services.AddControllersWithViews();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -47,6 +52,7 @@ namespace Demo_MicrosoftAuth
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseMigrationsEndPoint();
             }
             else
             {
@@ -59,9 +65,7 @@ namespace Demo_MicrosoftAuth
 
             app.UseRouting();
 
-
             app.UseAuthentication();
-
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -69,6 +73,7 @@ namespace Demo_MicrosoftAuth
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
+                endpoints.MapRazorPages();
             });
         }
     }
